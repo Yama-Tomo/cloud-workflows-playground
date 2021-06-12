@@ -1,0 +1,43 @@
+main:
+  params: [args]
+  steps:
+  - run_worker:
+      try:
+        call: http.get
+        args:
+          url: ${args.url}
+          query: ${args.query}
+          auth:
+            type: OIDC
+          timeout: 1800
+        result: result
+      retry:
+        predicate: ${retry_predicate}
+        max_retries: 3
+        backoff:
+          initial_delay: 2
+          max_delay: 10
+          multiplier: 2
+      except:
+        as: e
+        steps:
+          - errorLogging:
+              call: sys.log
+              args:
+                text: ${e}
+                severity: ERROR
+          - throwError:
+              raise: ${e}
+
+  - return_output:
+      return: ${result}
+
+retry_predicate:
+  params: [e]
+  steps:
+    - what_to_repeat:
+        switch:
+        - condition: ${e.code >= 500}
+          return: True
+    - otherwise:
+        return: False
