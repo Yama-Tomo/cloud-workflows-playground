@@ -4,6 +4,7 @@ main:
   - define_workflow_vars:
       assign:
         - result: "worker did not run"
+        - queueGroupIndex: 0
         - queueIndex: 0
 
   - get_worker_queue:
@@ -11,6 +12,8 @@ main:
         call: http.get
         args:
           url: ${args.create_queue_endpoint}
+          query:
+            queue_group_index: ${queueGroupIndex}
           auth:
             type: OIDC
         result: queue
@@ -24,9 +27,17 @@ main:
 
   - check_end_of_queue:
       switch:
+        - condition: ${len(queue.body) == 0}
+          next: return_output
         - condition: ${len(queue.body) > queueIndex}
           next: invoke_worker
-      next: return_output
+        - condition: ${len(queue.body) == queueIndex}
+          steps:
+            - next_queue_group:
+                assign:
+                  - queueGroupIndex: ${queueGroupIndex+1}
+                  - queueIndex: 0
+                next: get_worker_queue
 
   - invoke_worker:
       try:
@@ -50,7 +61,7 @@ main:
         - logging:
             call: sys.log
             args:
-              text: ${"processing done (" + string(queueIndex) + " / " + string(len(queue.body)) + ")"}
+              text: ${"processing done. queue group#" + string(queueGroupIndex) + " (" + string(queueIndex) + " / " + string(len(queue.body)) + ")"}
               severity: INFO
       next: check_end_of_queue
 

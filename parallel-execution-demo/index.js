@@ -21,11 +21,26 @@ app.get('/queue', (req, res) => {
     query: { seq },
   });
 
-  const queue = [
-    [createQueue('1'), createQueue('2'), createQueue('3')],
-    [createQueue('4')],
-    [createQueue('5'), createQueue('6'), createQueue('7')],
-  ];
+  const queueGroupIdx = req.query.queue_group_index ? Number(req.query.queue_group_index) : undefined;
+  const queue = (() => {
+    if (queueGroupIdx == 0) {
+      return [
+        [createQueue('1'), createQueue('2'), createQueue('3')],
+        [createQueue('4')],
+        [createQueue('5'), createQueue('6'), createQueue('7')],
+      ];
+    }
+
+    if (queueGroupIdx == 1) {
+      return [
+        [createQueue('8'), createQueue('9'), createQueue('10')],
+        [createQueue('11')],
+      ];
+    }
+
+    return [];
+  })();
+
   res.send(queue);
 });
 
